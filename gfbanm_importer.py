@@ -93,6 +93,7 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
     :param use_quaternion_rotation: Use Quaternion Rotation bool.
     :param add_euler_rotation: Additive Euler Rotation.
     """
+
     assert context.object is not None and context.object.type == "ARMATURE", \
         "Selected object is not Armature."
     previous_location = context.object.location
@@ -107,6 +108,12 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
         if track is None or track.name is None or track.name == "":
             continue
         print("Creating keyframes for " + track.name + " track.")
+        print(track.rotate)
+        print(track.rotate)
+        print(track.rotate)
+        print(track.rotate)
+        print(track.rotate)
+        print(track.rotate)
         pose_bone = context.object.pose.bones.get(track.name)
         if pose_bone is None:
             continue
@@ -115,6 +122,7 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
         t_list = get_vector_track_transforms(track.translate, key_frames)
         r_list = get_rotation_track_transforms(track.rotate, key_frames, euler_rotation_mode,
                                                add_euler_rotation)
+        
         s_list = get_vector_track_transforms(track.scale, key_frames)
         if context.object.animation_data is None:
             context.object.animation_data_create()
@@ -291,16 +299,54 @@ def get_rotation_track_transforms(track: DynamicRotationTrackT | FixedRotationTr
     return transforms
 
 
+PI_DIVISOR = math.pi / 65535
+PI_ADDEND = math.pi / 4.0
+
+def expand_float(i: int):
+    return i * PI_DIVISOR - PI_ADDEND
+
+def quantize_float(i: float):
+    result = int((i + PI_ADDEND) / PI_DIVISOR)
+    return result & 0x7FFF
+
+def unpack(X: int, Y: int, Z: int):
+    print(X,Y,Z)
+    pack = (Z << 32) | (Y << 16) | X
+    missing_component = pack & 3
+    isNegative = (pack & 4) == 0
+    tx = expand_float((pack >> 3) & 0x7FFF)
+    ty = expand_float((pack >> (15 + 3)) & 0x7FFF)
+    tz = expand_float((pack >> (30 + 3)) & 0x7FFF)
+    tw = 1.0 - (tx * tx + ty * ty + tz * tz)
+
+    if tw < 0.0:
+        tw = 0.0
+
+    tw = math.sqrt(tw)
+
+    if missing_component == 0:
+        result = (tw, ty, tz, tx)
+    elif missing_component == 1:
+        result = (tx, tw, tz, ty)
+    elif missing_component == 2:
+        result = (tx, ty, tw, tz)
+    else:
+        result = (tx, ty, tz, tw)
+    
+    
+    return result
+
+
+
 def get_euler_from_vector(vec: Vec3T | sVec3T | None, euler_rotation_mode="XYZ") -> Euler | None:
     """
-    Returns Euler object from Vec3 or sVec3 object.
-    :param vec: Vec3 or sVec object.
-    :param euler_rotation_mode: Euler Rotation Mode string.
+    Converts packed quaternion components into an Euler object.
+    :param z: Packed short for Z-axis.
+    :param y: Packed short for Y-axis.
+    :param x: Packed short for X-axis.
+    :param euler_rotation_mode: Euler rotation mode string.
     :return: Euler object.
     """
-    if vec is None:
-        return None
-    x = vec.x / 65536 * 360
-    y = vec.y / 65536 * 360
-    z = vec.z / 65536 * 360
-    return Euler((math.radians(x), math.radians(y), math.radians(z)), euler_rotation_mode)
+    quaternion_tuple = unpack(vec.x, vec.y, vec.z)  # Get (x, y, z, w) tuple
+    quaternion = Quaternion(quaternion_tuple)  # Create Blender Quaternion object
+    return quaternion.to_euler(euler_rotation_mode)
