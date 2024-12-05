@@ -10,12 +10,12 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper
 
 bl_info = {
-    "name": "GFBANM Import",
+    "name": "GFBANM/TRANM Import",
     "author": "Shararamosh",
     "blender": (2, 80, 0),
     "version": (1, 0, 0),
     "location": "File > Import-Export",
-    "description": "Import GFBANM data",
+    "description": "Import GFBANM/TRANM data",
     "category": "Import-Export",
 }
 
@@ -25,11 +25,11 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
     Class for operator that imports GFBANM files.
     """
     bl_idname = "import.gfbanm"
-    bl_label = "Import GFBANM"
-    bl_description = "Import one or multiple GFBANM files"
+    bl_label = "Import GFBANM/TRANM"
+    bl_description = "Import one or multiple GFBANM/TRANM files"
     directory: StringProperty()
     filename_ext = ".gfbanm"
-    filter_glob: StringProperty(default="*.gfbanm", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*.gfbanm;*.tranm", options={'HIDDEN'})
     files: CollectionProperty(type=bpy.types.PropertyGroup)
     euler_rotation_mode: EnumProperty(
         name="Euler Rotation Mode",
