@@ -28,7 +28,6 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
     bl_label = "Import GFBANM/TRANM"
     bl_description = "Import one or multiple GFBANM/TRANM files"
     directory: StringProperty()
-    filename_ext = ".gfbanm"
     filter_glob: StringProperty(default="*.gfbanm;*.tranm", options={'HIDDEN'})
     files: CollectionProperty(type=bpy.types.PropertyGroup)
     euler_rotation_mode: EnumProperty(
@@ -46,18 +45,9 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         description="Transform Euler to Quaternion for Rotation Keyframes",
         default=False
     )
-    add_euler_rotation_X: FloatProperty(
-        name="Additive X Euler Rotation",
-        default=0.0
-    )
-    add_euler_rotation_Y: FloatProperty(
-        name="Additive Y Euler Rotation",
-        default=0.0
-    )
-    add_euler_rotation_Z: FloatProperty(
-        name="Additive Z Euler Rotation",
-        default=0.0
-    )
+    add_euler_rotation_X: FloatProperty(name="Additive X Euler Rotation", default=0.0)
+    add_euler_rotation_Y: FloatProperty(name="Additive Y Euler Rotation", default=0.0)
+    add_euler_rotation_Z: FloatProperty(name="Additive Z Euler Rotation", default=0.0)
 
     def execute(self, context: bpy.types.Context):
         if not attempt_install_flatbuffers(self):
@@ -91,19 +81,22 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         except OSError as e:
             self.report({"ERROR"}, "Failed to import " + self.filepath + ".\n" + str(e))
             return {"CANCELLED"}
-        else:
-            return {"FINISHED"}
+        return {"FINISHED"}
 
     @classmethod
-    def poll(cls, context: bpy.types.Context):
+    def poll(cls, _context: bpy.types.Context):
         """
         Checking if operator can be active.
-        :param context: Blender's Context.
+        :param _context: Blender's Context.
         :return: True if active, False otherwise.
         """
         return True
 
-    def draw(self, context):
+    def draw(self, _context: bpy.types.Context):
+        """
+        Drawing importer's menu.
+        :param _context: Blender's context.
+        """
         box = self.layout.box()
         box.prop(self, "euler_rotation_mode", text="Euler Rotation Mode")
         box.prop(self, "add_euler_rotation_X", text="Additive X Euler Rotation")
@@ -113,14 +106,14 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         box.prop(self, "use_quaternion_rotation", text="Use Quaternion Rotation")
 
 
-def menu_func_import(operator: bpy.types.Operator, context: bpy.types.Context):
+def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
     """
     Function that adds GFBANM import operator.
     :param operator: Blender's operator.
-    :param context: Blender's Context.
+    :param _context: Blender's Context.
     :return:
     """
-    operator.layout.operator(ImportGfbanm.bl_idname, text="GFBANM (.gfbanm)")
+    operator.layout.operator(ImportGfbanm.bl_idname, text="GFBANM/TRANM (.gfbanm, .tranm)")
 
 
 def register():

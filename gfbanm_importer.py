@@ -4,7 +4,6 @@
 import os
 import sys
 import math
-from typing import cast
 
 import bpy
 from mathutils import Vector, Euler, Quaternion, Matrix
@@ -160,8 +159,7 @@ def apply_track_transforms_to_posebone(context: bpy.types.Context, pose_bone: bp
         if pose_bone.parent is not None:
             parent_loc, parent_rot, _ = get_posebone_global_matrix(pose_bone.parent).decompose()
         else:
-            parent_loc, parent_rot, _ = cast(tuple[Vector, Quaternion, Vector],
-                                             pose_bone.id_data.matrix_world.decompose())
+            parent_loc, parent_rot, _ = pose_bone.id_data.matrix_world.decompose()
         loc_key = rot_key = scale_key = False
         if transform[0] is not None:
             bone_loc = parent_loc + transform[0]
