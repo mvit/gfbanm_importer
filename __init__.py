@@ -11,7 +11,7 @@ from bpy_extras.io_utils import ImportHelper
 
 bl_info = {
     "name": "GFBANM/TRANM Import",
-    "author": "Shararamosh",
+    "author": "Shararamosh, ElChicoEevee",
     "blender": (2, 80, 0),
     "version": (1, 0, 0),
     "location": "File > Import-Export",
@@ -40,11 +40,6 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                ("ZYX", "ZYX Euler", "ZYX Euler")),
         description="Euler Rotation Mode for Rotation Keyframes"
     )
-    use_quaternion_rotation: BoolProperty(
-        name="Use Quaternion Rotation",
-        description="Transform Euler to Quaternion for Rotation Keyframes",
-        default=False
-    )
     add_euler_rotation_X: FloatProperty(name="Additive X Euler Rotation", default=0.0)
     add_euler_rotation_Y: FloatProperty(name="Additive Y Euler Rotation", default=0.0)
     add_euler_rotation_Z: FloatProperty(name="Additive Z Euler Rotation", default=0.0)
@@ -61,9 +56,9 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
             for file in self.files:
                 try:
                     import_animation(context, os.path.join(str(self.directory), file.name),
-                                     self.euler_rotation_mode, self.use_quaternion_rotation, (
-                                         self.add_euler_rotation_X, self.add_euler_rotation_Y,
-                                         self.add_euler_rotation_Z))
+                                     self.euler_rotation_mode,
+                                     (self.add_euler_rotation_X, self.add_euler_rotation_Y,
+                                      self.add_euler_rotation_Z))
                 except OSError as e:
                     self.report({"INFO"}, "Failed to import " + file + ".\n" + str(e))
                 else:
@@ -74,8 +69,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                 return {"FINISHED"}
             return {"CANCELLED"}
         try:
-            import_animation(context, self.filepath, self.euler_rotation_mode,
-                             self.use_quaternion_rotation, (
+            import_animation(context, self.filepath, self.euler_rotation_mode, (
                                  self.add_euler_rotation_X, self.add_euler_rotation_Y,
                                  self.add_euler_rotation_Z))
         except OSError as e:
@@ -103,7 +97,6 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         box.prop(self, "add_euler_rotation_Y", text="Additive Y Euler Rotation")
         box.prop(self, "add_euler_rotation_Z", text="Additive Z Euler Rotation")
         box = self.layout.box()
-        box.prop(self, "use_quaternion_rotation", text="Use Quaternion Rotation")
 
 
 def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):

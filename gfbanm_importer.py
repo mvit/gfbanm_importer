@@ -25,13 +25,12 @@ from GFLib.Anim.sVec3 import sVec3T
 
 
 def import_animation(context: bpy.types.Context, file_path: str, euler_rotation_mode: str,
-                     use_quaternion_rotation: bool, add_euler_rotation: (float, float, float)):
+                     add_euler_rotation: (float, float, float)):
     """
     Imports animation from processing gfbanm file.
     :param context: Blender's Context.
     :param file_path: Path to gfbanm file.
     :param euler_rotation_mode: Euler Rotation Mode string.
-    :param use_quaternion_rotation: Use Quaternion Rotation bool.
     :param add_euler_rotation: Additive Euler Rotation.
     """
     if context.object is None or context.object.type != "ARMATURE":
@@ -40,7 +39,6 @@ def import_animation(context: bpy.types.Context, file_path: str, euler_rotation_
     anim_name = os.path.splitext(os.path.basename(file_path))[0]
     print("Animation name: " + anim_name + ".")
     print("Euler Rotation Mode: " + euler_rotation_mode + ".")
-    print("Use Quaternion Rotation: " + str(use_quaternion_rotation) + ".")
     with open(file_path, "rb") as file:
         anm = AnimationT.InitFromPackedBuf(bytearray(file.read()), 0)
         if anm.info is None:
@@ -67,8 +65,7 @@ def import_animation(context: bpy.types.Context, file_path: str, euler_rotation_
         if context.object.mode != "POSE":
             bpy.ops.object.mode_set(mode="POSE")
         apply_animation_to_tracks(context, anim_name, anm.info.frameRate, anm.info.keyFrames,
-                                  anm.skeleton.tracks, euler_rotation_mode, use_quaternion_rotation,
-                                  add_euler_rotation)
+                                  anm.skeleton.tracks, euler_rotation_mode, add_euler_rotation)
         for bone, select in select_bones.items():
             bone.select = select
         if previous_frame != context.scene.frame_current:
@@ -79,8 +76,7 @@ def import_animation(context: bpy.types.Context, file_path: str, euler_rotation_
 
 def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_rate: int,
                               key_frames: int, tracks: list[BoneTrackT | None],
-                              euler_rotation_mode: str, use_quaternion_rotation: bool,
-                              add_euler_rotation: (float, float, float)):
+                              euler_rotation_mode: str, add_euler_rotation: (float, float, float)):
     """
     Applies animation to bones of selected Armature.
     :param context: Blender's Context.
@@ -89,10 +85,8 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
     :param key_frames: Keyframes amount.
     :param tracks: List of BoneTrack objects.
     :param euler_rotation_mode: Euler Rotation Mode string.
-    :param use_quaternion_rotation: Use Quaternion Rotation bool.
     :param add_euler_rotation: Additive Euler Rotation.
     """
-
     assert context.object is not None and context.object.type == "ARMATURE", \
         "Selected object is not Armature."
     previous_location = context.object.location
@@ -107,12 +101,6 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
         if track is None or track.name is None or track.name == "":
             continue
         print("Creating keyframes for " + track.name + " track.")
-        print(track.rotate)
-        print(track.rotate)
-        print(track.rotate)
-        print(track.rotate)
-        print(track.rotate)
-        print(track.rotate)
         pose_bone = context.object.pose.bones.get(track.name)
         if pose_bone is None:
             continue
@@ -121,7 +109,7 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
         t_list = get_vector_track_transforms(track.translate, key_frames)
         r_list = get_rotation_track_transforms(track.rotate, key_frames, euler_rotation_mode,
                                                add_euler_rotation)
-        
+
         s_list = get_vector_track_transforms(track.scale, key_frames)
         if context.object.animation_data is None:
             context.object.animation_data_create()
@@ -132,7 +120,7 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
             context.scene.render.fps = frame_rate
             context.scene.render.fps_base = 1.0
         apply_track_transforms_to_posebone(context, pose_bone, list(zip(t_list, r_list, s_list)),
-                                           use_quaternion_rotation, True)
+                                           True)
     context.object.location = previous_location
     context.object.rotation_mode = previous_rotation[0]
     context.object.rotation_euler = previous_rotation[1]
@@ -143,38 +131,39 @@ def apply_animation_to_tracks(context: bpy.types.Context, anim_name: str, frame_
 def apply_track_transforms_to_posebone(context: bpy.types.Context, pose_bone: bpy.types.PoseBone,
                                        transforms: list[
                                            (Vector | None, Euler | None, Vector | None)],
-                                       use_quaternion_rotation: bool,
                                        print_first_frame_transforms_info: bool):
     """
     Applies global transforms to PoseBone for every keyframe of animation.
     :param context: Blender's Context.
     :param pose_bone: Target PoseBone.
     :param transforms: List of (Location, Rotation, Scaling) global transform tuples.
-    :param use_quaternion_rotation: Use Quaternion Rotation bool.
     :param print_first_frame_transforms_info: Print information about applied first frame transforms or not.
     """
     for i, transform in enumerate(transforms):
         context.scene.frame_set(context.scene.frame_start + i)
         bone_loc, bone_rot, bone_scale = get_posebone_global_matrix(pose_bone).decompose()
         if pose_bone.parent is not None:
-            parent_loc, parent_rot, _ = get_posebone_global_matrix(pose_bone.parent).decompose()
+            parent_loc, _, _ = get_posebone_global_matrix(pose_bone.parent).decompose()
         else:
-            parent_loc, parent_rot, _ = pose_bone.id_data.matrix_world.decompose()
+            parent_loc, _, _ = pose_bone.id_data.matrix_world.decompose()
         loc_key = rot_key = scale_key = False
         if transform[0] is not None:
             bone_loc = parent_loc + transform[0]
             loc_key = True
+            set_posebone_global_matrix(pose_bone,
+                                       Matrix.LocRotScale(bone_loc, bone_rot, bone_scale))
         if transform[1] is not None:
-            bone_rot = parent_rot.copy()
-            if use_quaternion_rotation:
-                bone_rot.rotate(transform[1].to_quaternion())
-            else:
-                bone_rot.rotate(transform[1])
+            pose_bone.rotation_euler = transform[1].copy()
+            pose_bone.rotation_quaternion = pose_bone.rotation_euler.to_quaternion()
+            axis_angle = pose_bone.rotation_quaternion.to_axis_angle()
+            pose_bone.rotation_axis_angle = [axis_angle[0][0], axis_angle[0][1], axis_angle[0][2],
+                                             axis_angle[1]]
             rot_key = True
         if transform[2] is not None:
-            bone_scale = transform[2].copy()
+            pose_bone.scale = transform[2].copy()
             scale_key = True
-        set_posebone_global_matrix(pose_bone, Matrix.LocRotScale(bone_loc, bone_rot, bone_scale))
+        if i == 0 and (loc_key or rot_key or scale_key):
+            print("First frame transforms:")
         if loc_key:
             if i == 0 and print_first_frame_transforms_info:
                 print("Raw location: " + str(transform[0]) + ".")
@@ -185,8 +174,6 @@ def apply_track_transforms_to_posebone(context: bpy.types.Context, pose_bone: bp
         if rot_key:
             if i == 0 and print_first_frame_transforms_info:
                 print("Raw rotation: " + str(transform[1]) + ".")
-                print("Parent global rotation: " + str(parent_rot) + ".")
-                print("Global rotation: " + str(bone_rot) + ".")
                 if pose_bone.rotation_mode == "QUATERNION":
                     print("Pose quaternion rotation: " + str(pose_bone.rotation_quaternion) + ".")
                 elif pose_bone.rotation_mode == "AXIS_ANGLE":
@@ -300,28 +287,26 @@ def get_rotation_track_transforms(track: DynamicRotationTrackT | FixedRotationTr
 PI_DIVISOR = math.pi / 65535
 PI_ADDEND = math.pi / 4.0
 
-def expand_float(i: int):
+
+def expand_float(i: int) -> float:
     return i * PI_DIVISOR - PI_ADDEND
 
-def quantize_float(i: float):
+
+def quantize_float(i: float) -> int:
     result = int((i + PI_ADDEND) / PI_DIVISOR)
     return result & 0x7FFF
 
-def unpack(X: int, Y: int, Z: int):
-    print(X,Y,Z)
-    pack = (Z << 32) | (Y << 16) | X
+
+def unpack(x: int, y: int, z: int) -> tuple[float, float, float, float]:
+    pack = (z << 32) | (y << 16) | x
     missing_component = pack & 3
-    isNegative = (pack & 4) == 0
+    # isNegative = (pack & 4) == 0
     tx = expand_float((pack >> 3) & 0x7FFF)
     ty = expand_float((pack >> (15 + 3)) & 0x7FFF)
     tz = expand_float((pack >> (30 + 3)) & 0x7FFF)
     tw = 1.0 - (tx * tx + ty * ty + tz * tz)
-
-    if tw < 0.0:
-        tw = 0.0
-
+    tw = max(tw, 0.0)
     tw = math.sqrt(tw)
-
     if missing_component == 0:
         result = (tw, ty, tz, tx)
     elif missing_component == 1:
@@ -330,21 +315,26 @@ def unpack(X: int, Y: int, Z: int):
         result = (tx, ty, tw, tz)
     else:
         result = (tx, ty, tz, tw)
-    
-    
     return result
-
 
 
 def get_euler_from_vector(vec: Vec3T | sVec3T | None, euler_rotation_mode="XYZ") -> Euler | None:
     """
     Converts packed quaternion components into an Euler object.
-    :param z: Packed short for Z-axis.
-    :param y: Packed short for Y-axis.
-    :param x: Packed short for X-axis.
+    :param vec: Packed Vector object.
     :param euler_rotation_mode: Euler rotation mode string.
     :return: Euler object.
     """
-    quaternion_tuple = unpack(vec.x, vec.y, vec.z)  # Get (x, y, z, w) tuple
+    if vec is None:
+        return None
+    quaternion_tuple = unpack(vec.x, vec.y, vec.z)  # Get (w, x, y, z) tuple
     quaternion = Quaternion(quaternion_tuple)  # Create Blender Quaternion object
-    return quaternion.to_euler(euler_rotation_mode)
+    euler = quaternion.to_euler(euler_rotation_mode)
+    # These modifications helped with some rotations, but some had 90 degrees difference.
+    # x = -1.0 * (math.pi + euler.z)
+    # y = -1.0 * euler.y
+    # z = euler.x
+    # euler.x = x
+    # euler.y = y
+    # euler.z = z
+    return euler
