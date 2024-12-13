@@ -11,7 +11,7 @@ from bpy_extras.io_utils import ImportHelper
 
 bl_info = {
     "name": "GFBANM/TRANM Import",
-    "author": "Shararamosh, ElChicoEevee",
+    "author": "Shararamosh, Mvit & ElChicoEevee",
     "blender": (2, 80, 0),
     "version": (1, 0, 0),
     "location": "File > Import-Export",
@@ -56,9 +56,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
             for file in self.files:
                 try:
                     import_animation(context, os.path.join(str(self.directory), file.name),
-                                     self.euler_rotation_mode,
-                                     (self.add_euler_rotation_X, self.add_euler_rotation_Y,
-                                      self.add_euler_rotation_Z))
+                                     self.euler_rotation_mode)
                 except OSError as e:
                     self.report({"INFO"}, "Failed to import " + file + ".\n" + str(e))
                 else:
@@ -69,9 +67,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                 return {"FINISHED"}
             return {"CANCELLED"}
         try:
-            import_animation(context, self.filepath, self.euler_rotation_mode, (
-                                 self.add_euler_rotation_X, self.add_euler_rotation_Y,
-                                 self.add_euler_rotation_Z))
+            import_animation(context, self.filepath, self.euler_rotation_mode)
         except OSError as e:
             self.report({"ERROR"}, "Failed to import " + self.filepath + ".\n" + str(e))
             return {"CANCELLED"}
