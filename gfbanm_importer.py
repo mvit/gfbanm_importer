@@ -169,7 +169,8 @@ def apply_track_transforms_to_posebone(
     loc, rot, scale = matrix.decompose()
 
     for i, transform in enumerate(transforms):
-        pose_bone.location = transform[0] - loc
+        changeposition = transform[0] - loc
+        pose_bone.location = Vector((changeposition[2], changeposition[0], -changeposition[1]))
         pose_bone.rotation_quaternion = rot.conjugated() @ transform[1]
         pose_bone.scale = Vector((transform[2].x / scale.x, transform[2].y / scale.y, transform[2].z / scale.z))
         pose_bone.keyframe_insert(data_path="location", frame=i)
