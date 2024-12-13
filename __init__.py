@@ -40,9 +40,11 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                ("ZYX", "ZYX Euler", "ZYX Euler")),
         description="Euler Rotation Mode for Rotation Keyframes"
     )
-    add_euler_rotation_X: FloatProperty(name="Additive X Euler Rotation", default=0.0)
-    add_euler_rotation_Y: FloatProperty(name="Additive Y Euler Rotation", default=0.0)
-    add_euler_rotation_Z: FloatProperty(name="Additive Z Euler Rotation", default=0.0)
+    invert_x_location: BoolProperty(
+        name="Invert X Location",
+        description="Invert the X Location",
+        default=False
+    )
 
     def execute(self, context: bpy.types.Context):
         if not attempt_install_flatbuffers(self):
@@ -56,7 +58,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
             for file in self.files:
                 try:
                     import_animation(context, os.path.join(str(self.directory), file.name),
-                                     self.euler_rotation_mode)
+                                     self.euler_rotation_mode, self.invert_x_location)
                 except OSError as e:
                     self.report({"INFO"}, "Failed to import " + file + ".\n" + str(e))
                 else:
@@ -67,7 +69,7 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
                 return {"FINISHED"}
             return {"CANCELLED"}
         try:
-            import_animation(context, self.filepath, self.euler_rotation_mode)
+            import_animation(context, self.filepath, self.euler_rotation_mode, self.invert_x_location)
         except OSError as e:
             self.report({"ERROR"}, "Failed to import " + self.filepath + ".\n" + str(e))
             return {"CANCELLED"}
@@ -89,11 +91,8 @@ class ImportGfbanm(bpy.types.Operator, ImportHelper):
         """
         box = self.layout.box()
         box.prop(self, "euler_rotation_mode", text="Euler Rotation Mode")
-        box.prop(self, "add_euler_rotation_X", text="Additive X Euler Rotation")
-        box.prop(self, "add_euler_rotation_Y", text="Additive Y Euler Rotation")
-        box.prop(self, "add_euler_rotation_Z", text="Additive Z Euler Rotation")
         box = self.layout.box()
-
+        box.prop(self, "invert_x_location", text="Invert X Location")
 
 def menu_func_import(operator: bpy.types.Operator, _context: bpy.types.Context):
     """
